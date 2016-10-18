@@ -10,11 +10,11 @@ import java.util.Scanner;
 
 public class ProcessScheduler 
 {
-	static final boolean DEBUG = true;
+	static final boolean DEBUG = false;
 	static final String IFNAME_DEF = "input.data";
 	static final String OFNAME_DEF = "output.data";
 	
-	final Algorithm ALGORITHM = Algorithm.SJF;
+	final Algorithm ALGORITHM = Algorithm.RR;
 	final boolean PREEMPTIVE;
  	
 	private LinkedList<PCB> jobQueue;
@@ -23,6 +23,7 @@ public class ProcessScheduler
 	
 	private int time;
 	private int timeStep;
+	private boolean newProcess;		//Flag used for preemptive switch check
 	private PCB runningProcess;
 	
 	
@@ -101,32 +102,19 @@ public class ProcessScheduler
 	
 	public void step()
 	{
-		boolean processAdded = false; 	//Flag used for preemptive switch check
+		this.newProcess = false;
 		
-		if (DEBUG)  
-			System.out.println("                  time: " + time + "        job q: "
-					+ jobQueue.size() + "        rdy q: " + readyQueue.size()
-					+ "        current pid: " + ( (runningProcess == null)? "null" : runningProcess.id)
-			);
+		//if (DEBUG)  
+		//	System.out.println("                  time: " + time + "        job q: "
+		//			+ jobQueue.size() + "        rdy q: " + readyQueue.size()
+		//			+ "        current pid: " + ( (runningProcess == null)? "null" : runningProcess.id)
+		//	);
 		
 		
 		/* Check job queue for arriving jobs */
 		while (!jobQueue.isEmpty() && time >= jobQueue.peek().arriveTime)
 		{
 			addProcess(jobQueue.remove(), ALGORITHM);
-			processAdded = true;
-		}
-		
-		if (DEBUG) {
-			System.out.print("        process execution order:");
-			for (int i = 0; i < readyQueue.size(); i++)
-				System.out.print("   p"
-						+ readyQueue.get(i).id + "("
-						+ readyQueue.get(i).arriveTime + ","
-						+ readyQueue.get(i).burstTime + ","
-						+ readyQueue.get(i).priority + ")"
-				);
-			System.out.println();
 		}
 		
 		
@@ -145,7 +133,7 @@ public class ProcessScheduler
 		
 		
 		/* Check for preemptive process switch */
-		else if( PREEMPTIVE && processAdded)
+		else if( PREEMPTIVE && this.newProcess)
 			advance(false);
 		
 		
@@ -170,22 +158,25 @@ public class ProcessScheduler
 	 */
 	private void advance(final boolean removeCurrent) 
 	{		
+		if (DEBUG) {
+			System.out.print("        process execution order:");
+			for (int i = 0; i < readyQueue.size(); i++)
+				System.out.print("   p"
+						+ readyQueue.get(i).id + "("
+						+ readyQueue.get(i).arriveTime + ","
+						+ readyQueue.get(i).burstTime + ","
+						+ readyQueue.get(i).priority + ")"
+				);
+			System.out.println();
+		}
+		
 		PCB temp = runningProcess;
+		int n = readyQueue.indexOf(temp);
 		
 		if (runningProcess == null)
-		{
 			runningProcess = readyQueue.peek();
-			outfile.print(time + "   ");
-		}
 		else
-		{
-			if (removeCurrent) {
-				readyQueue.remove(temp);		
-				print(""+temp.id, "  " , "p" + temp.id + " complete");
-			}
 			outfile.print(time + "   " + temp.id + "\n");	// process end time
-			
-		}
 		
 		if (readyQueue.isEmpty())
 		{
@@ -193,23 +184,37 @@ public class ProcessScheduler
 			return;
 		}
 		
-		switch (ALGORITHM) 
-		{
+		
+		switch (ALGORITHM) {
 		case PH:
 		case PL:
 		case SJF:
+			if (removeCurrent) {
+				readyQueue.remove(temp);		
+				print("","", "    Process p" + temp.id + " complete");
+			}
+			
 			runningProcess = readyQueue.peek();
+			if (runningProcess != null)
+				outfile.print(time + "   ");	// print new process start time
 			break;
+			
 		case RR:
-			int n = readyQueue.indexOf(temp);
 			runningProcess = (n+1 < readyQueue.size())? 
-					readyQueue.get(n+1) : readyQueue.getFirst();
+						readyQueue.get(n+1) : readyQueue.getFirst();
+			if (removeCurrent) {
+				readyQueue.remove(temp);
+				if (readyQueue.isEmpty()) 
+					runningProcess = null;
+				print("","", "    Process p" + temp.id + " complete");
+			}
+			if(runningProcess != null)
+				outfile.print(time + "   ");	// print new process start time
 			break;
 		}
 		
-		outfile.print(time + "   ");	// print new process start time
-		
-		print("  ", "" + runningProcess.id, "Switching to p" + runningProcess.id);
+		print("","", "        Loading process " + ( (runningProcess != null)? 
+				"p" + runningProcess.id : "null") );
 	}
 	
 	
@@ -222,7 +227,7 @@ public class ProcessScheduler
 	 */
 	private void addProcess(PCB process, Algorithm alg)
 	{
-		System.out.println(time + "            Process p" + process.id + " arrives");
+		print("","", "Process p" + process.id + " arrives");
 		
 		int destination = 0;
 		switch(alg)
@@ -234,6 +239,7 @@ public class ProcessScheduler
 					&& process.burstTime >= readyQueue.get(destination).burstTime )
 				destination++;
 			readyQueue.add(destination, process);
+			if (destination == 0) newProcess = true;
 			break;
 			
 		/* Priority High */
@@ -242,6 +248,7 @@ public class ProcessScheduler
 					&& process.priority <= readyQueue.get(destination).priority )
 				destination++;
 			readyQueue.add(destination, process);
+			if (destination == 0) newProcess = true;
 			break;
 			
 		/* Priority Low */
@@ -250,6 +257,7 @@ public class ProcessScheduler
 					&& process.priority >= readyQueue.get(destination).priority )
 				destination++;
 			readyQueue.add(destination, process);
+			if (destination == 0) newProcess = true;
 			break;
 			
 		/* Round-Robin */
