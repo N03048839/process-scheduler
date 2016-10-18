@@ -33,7 +33,6 @@ public class ProcessScheduler
 		System.out.println("--- Constructing Scheduler ---");
 		
 		/* Set global vars */
-		time = 0;
 		runningProcess = null;
 		jobQueue = new LinkedList<PCB>();
 		readyQueue = new LinkedList<PCB>();
@@ -57,11 +56,6 @@ public class ProcessScheduler
 					infile.nextInt()	//process priority
 			);
 			
-			if (DEBUG)
-				System.out.print("\n    process id: p" + i
-						+ "\n    arrival time: " + process.arriveTime
-						+ "\n    burst: " + process.burstTime
-						+ "\n    priority: " + process.priority + "\n    ");
 			
 			/* Place node in job queue, in order of arrival time */
 			int destination = 0;
@@ -75,13 +69,6 @@ public class ProcessScheduler
 		infile.close();
 		System.out.print("--- Scheduler Constructed ---\n\n\n");
 		
-		if (DEBUG) {
-			System.out.print("    Job arrival order:");
-			for (int i = 0; i < jobQueue.size(); i++)
-				System.out.print("   p" + jobQueue.get(i).id + "("
-						+ jobQueue.get(i).arriveTime + ")");
-			System.out.print("\n\n\n");
-		}
 	}
 	
 	
@@ -103,12 +90,6 @@ public class ProcessScheduler
 	public void step()
 	{
 		this.newProcess = false;
-		
-		//if (DEBUG)  
-		//	System.out.println("                  time: " + time + "        job q: "
-		//			+ jobQueue.size() + "        rdy q: " + readyQueue.size()
-		//			+ "        current pid: " + ( (runningProcess == null)? "null" : runningProcess.id)
-		//	);
 		
 		
 		/* Check job queue for arriving jobs */
@@ -191,7 +172,7 @@ public class ProcessScheduler
 		case SJF:
 			if (removeCurrent) {
 				readyQueue.remove(temp);		
-				print("","", "    Process p" + temp.id + " complete");
+				print("    Process p" + temp.id + " complete");
 			}
 			
 			runningProcess = readyQueue.peek();
@@ -206,14 +187,14 @@ public class ProcessScheduler
 				readyQueue.remove(temp);
 				if (readyQueue.isEmpty()) 
 					runningProcess = null;
-				print("","", "    Process p" + temp.id + " complete");
+				print("    Process p" + temp.id + " complete");
 			}
-			if(runningProcess != null)
+			if (runningProcess != null)
 				outfile.print(time + "   ");	// print new process start time
 			break;
 		}
 		
-		print("","", "        Loading process " + ( (runningProcess != null)? 
+		print("        Loading process " + ( (runningProcess != null)? 
 				"p" + runningProcess.id : "null") );
 	}
 	
@@ -227,7 +208,7 @@ public class ProcessScheduler
 	 */
 	private void addProcess(PCB process, Algorithm alg)
 	{
-		print("","", "Process p" + process.id + " arrives");
+		print("Process p" + process.id + " arrives");
 		
 		int destination = 0;
 		switch(alg)
@@ -269,7 +250,7 @@ public class ProcessScheduler
 	
 	
 	
-	public void print(String currentid, String newid, String event)
+	public void print(String event)
 	{
 		System.out.println( time + (time < 10 ? "    " : "   ") + event);
 	}
