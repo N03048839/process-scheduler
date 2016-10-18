@@ -101,9 +101,109 @@ public class ProcessScheduler
 	
 	public void step()
 	{
+		if (DEBUG) {
+			System.out.println("                  time: " + time + "        job q: "
+					+ jobQueue.size() + "        rdy q: " + readyQueue.size()
+					+ "        current pid: " + ( (runningProcess == null)? "null" : runningProcess.id));
+		}
 		
+		boolean processAdded = false; 	//Flag used for preemptive switch check
+		boolean processSwitched = false;
+		
+		
+		/* Check job queue for arriving jobs */
+		while (!jobQueue.isEmpty() && time >= jobQueue.peek().arriveTime)
+		{
+			addProcess(jobQueue.remove(), ALGORITHM);
+			processAdded = true;
+		}
+		
+		if (runningProcess == null)
+		{
+			if (readyQueue.isEmpty())
+				return;
+			
+			advance(false);
+		}
+		
+		
+		/* Check for end-of-process process switch */
+		else if ( runningProcess.runTime >= runningProcess.burstTime )
+		{
+			advance(true);
+		}
+		
+		
+		/* Check for preemptive process switch */
+		else if( PREEMPTIVE && processAdded)
+		{
+			advance(false);
+		}
+		
+		
+		/* Check for Round-Robin process switch */
+		else if( ALGORITHM == Algorithm.RR && time % timeStep == 0 && readyQueue.size() > 1)
+		{
+			advance(false);
+		}
+		
+		
+		/* Increment clock time */
+		time++;
+		runningProcess.runTime++;
 	}
 	
+	
+	
+	/**
+	 * Gives cpu control to the next queued process.
+	 * PRECONDITION: running process is not null
+	 * 
+	 * @param removeCurrent whether the current process has completed execution
+	 */
+	private void advance(final boolean removeCurrent) 
+	{		
+		PCB temp = runningProcess;
+		
+		if (runningProcess == null)
+		{
+			runningProcess = readyQueue.peek();
+			outfile.print(time + "   ");
+		}
+		else
+		{
+			if (removeCurrent) {
+				readyQueue.remove(temp);		
+				print(""+temp.id, "  " , "p" + temp.id + "complete");
+			}
+			outfile.print(time + "   " + temp.id + "\n");	// process end time
+			
+		}
+		
+		if (readyQueue.isEmpty())
+		{
+			runningProcess = null;
+			return;
+		}
+		
+		switch (ALGORITHM) 
+		{
+		case PH:
+		case PL:
+		case SJF:
+			runningProcess = readyQueue.peek();
+			break;
+		case RR:
+			int n = readyQueue.indexOf(temp);
+			runningProcess = (n+1 < readyQueue.size())? 
+					readyQueue.get(n+1) : readyQueue.getFirst();
+			break;
+		}
+		
+		outfile.print(time + "   ");	// print new process start time
+		
+		print("  ", "" + runningProcess.id, "Switching to p" + runningProcess.id);
+	}
 	
 	
 	/**
