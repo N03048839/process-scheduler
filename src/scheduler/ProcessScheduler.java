@@ -42,7 +42,7 @@ public class ProcessScheduler
 		this.PREEMPTIVE = (infile.nextInt() != 0);
 		System.out.println("    preemptive? " + this.PREEMPTIVE);
 		int quantum = infile.nextInt();
-		this.timeStep = (quantum > 1? quantum : 1);
+		this.timeStep = (quantum > 1 ? quantum : 1);
 		System.out.println("    timeStep: " + this.timeStep);
 		
 		/* Create process nodes */
@@ -101,14 +101,13 @@ public class ProcessScheduler
 	
 	public void step()
 	{
-		if (DEBUG) {
+		boolean processAdded = false; 	//Flag used for preemptive switch check
+		
+		if (DEBUG)  
 			System.out.println("                  time: " + time + "        job q: "
 					+ jobQueue.size() + "        rdy q: " + readyQueue.size()
-					+ "        current pid: " + ( (runningProcess == null)? "null" : runningProcess.id));
-		}
-		
-		boolean processAdded = false; 	//Flag used for preemptive switch check
-		boolean processSwitched = false;
+					+ "        current pid: " + ( (runningProcess == null)? "null" : runningProcess.id)
+			);
 		
 		
 		/* Check job queue for arriving jobs */
@@ -118,39 +117,47 @@ public class ProcessScheduler
 			processAdded = true;
 		}
 		
+		if (DEBUG) {
+			System.out.print("        process execution order:");
+			for (int i = 0; i < readyQueue.size(); i++)
+				System.out.print("   p"
+						+ readyQueue.get(i).id + "("
+						+ readyQueue.get(i).arriveTime + ","
+						+ readyQueue.get(i).burstTime + ","
+						+ readyQueue.get(i).priority + ")"
+				);
+			System.out.println();
+		}
+		
+		
+		
+		/* Prime cpu with first process */
 		if (runningProcess == null)
 		{
-			if (readyQueue.isEmpty())
-				return;
-			
+			if (readyQueue.isEmpty())  return;			
 			advance(false);
 		}
 		
 		
 		/* Check for end-of-process process switch */
 		else if ( runningProcess.runTime >= runningProcess.burstTime )
-		{
 			advance(true);
-		}
 		
 		
 		/* Check for preemptive process switch */
 		else if( PREEMPTIVE && processAdded)
-		{
 			advance(false);
-		}
 		
 		
 		/* Check for Round-Robin process switch */
 		else if( ALGORITHM == Algorithm.RR && time % timeStep == 0 && readyQueue.size() > 1)
-		{
 			advance(false);
-		}
 		
 		
 		/* Increment clock time */
 		time++;
-		runningProcess.runTime++;
+		if (runningProcess != null)
+			runningProcess.runTime++;
 	}
 	
 	
@@ -174,7 +181,7 @@ public class ProcessScheduler
 		{
 			if (removeCurrent) {
 				readyQueue.remove(temp);		
-				print(""+temp.id, "  " , "p" + temp.id + "complete");
+				print(""+temp.id, "  " , "p" + temp.id + " complete");
 			}
 			outfile.print(time + "   " + temp.id + "\n");	// process end time
 			
@@ -256,12 +263,12 @@ public class ProcessScheduler
 	
 	public void print(String currentid, String newid, String event)
 	{
-		System.out.println( time + "    " + currentid + "    " + newid + "    " + event);
+		System.out.println( time + (time < 10 ? "    " : "   ") + event);
 	}
 	
 	
 	
-	public static void main(String[] args) 
+	public static void main(String[] args)
 	{
 		String infilename = IFNAME_DEF;
 		String outfilename = OFNAME_DEF;
